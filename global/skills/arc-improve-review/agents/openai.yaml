@@ -1,4 +1,0 @@
-interface:
-  display_name: "ARC Improve Review"
-  short_description: "Review and remediate one ARC Improve PR"
-  default_prompt: "Use $arc-improve-review to review and safely remediate one exact ARC Improve pull request head."

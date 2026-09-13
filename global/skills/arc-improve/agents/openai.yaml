@@ -1,4 +1,0 @@
-interface:
-  display_name: "ARC Improve"
-  short_description: "Deliver one evidence-backed ARC improvement"
-  default_prompt: "Use $arc-improve to deliver one evidence-backed ARC improvement from qualified concern through a guarded draft pull request."
