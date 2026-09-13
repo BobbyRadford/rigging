@@ -14,6 +14,11 @@ Usage:
 
 Machine selection: $RIG_MACHINE, else match `hostname -s` against
 machines/*/machine.toml.
+
+Harness config: global/harness/<h>/settings.json (claude) and
+global/harness/<h>/config.toml (codex), plus machines/<m>/harness/<h>/...
+on top, are MERGED into the live file: rig owns only the keys/tables it
+lists and leaves app-managed keys alone. Merged files never conflict.
 """
 import difflib, hashlib, json, os, re, socket, sys, tomllib
 from pathlib import Path
@@ -86,6 +91,94 @@ def read_fragment(p: Path) -> str:
     return p.read_text().rstrip("\n") + "\n" if p.is_file() else ""
 
 
+# ---------- merged harness config ----------
+HARNESS_CONFIG = {"claude": "settings.json", "codex": "config.toml"}
+
+
+def deep_merge(base, over):
+    out = dict(base)
+    for k, v in over.items():
+        out[k] = deep_merge(out[k], v) if isinstance(v, dict) and isinstance(out.get(k), dict) else v
+    return out
+
+
+def merge_json(live: str, owned: dict) -> str:
+    base = json.loads(live) if live.strip() else {}
+    return json.dumps(deep_merge(base, owned), indent=2) + "\n"
+
+
+def toml_segments(text: str):
+    """Split TOML text into (preamble_lines, [(header, lines)]) at every [table] header."""
+    pre, secs, cur = [], [], None
+    for line in text.splitlines(keepends=True):
+        if re.match(r"^\s*\[", line):
+            cur = (line.strip(), [line]); secs.append(cur)
+        elif cur is None:
+            pre.append(line)
+        else:
+            cur[1].append(line)
+    return pre, secs
+
+
+KEY_RE = re.compile(r"^\s*([A-Za-z0-9_.\-\"']+)\s*=")
+
+
+def merge_lines(base, over):
+    """Key-level merge of `k = v` lines: owned keys replace in place, new ones append, comments kept."""
+    owned = {m.group(1): l for l in over if (m := KEY_RE.match(l))}
+    out = []
+    for l in base:
+        m = KEY_RE.match(l)
+        out.append(owned.pop(m.group(1)) if m and m.group(1) in owned else l)
+    if owned:
+        while out and not out[-1].strip():
+            out.pop()
+        out.extend(owned.values())
+    return out
+
+
+def merge_toml(live: str, owned: str) -> str:
+    """Top-level keys and same-named [tables] merge key by key (owned wins).
+    [[array]] tables owned by rig replace every live occurrence of that header."""
+    lpre, lsecs = toml_segments(live)
+    opre, osecs = toml_segments(owned)
+    pre = merge_lines(lpre, opre)
+    array_headers = {h for h, _ in osecs if h.startswith("[[")}
+    secs = [[h, ls] for h, ls in lsecs if h not in array_headers]
+    for h, ls in osecs:
+        hit = next((s for s in secs if s[0] == h), None) if not h.startswith("[[") else None
+        if hit:
+            hit[1] = [ls[0]] + merge_lines(hit[1][1:], ls[1:])
+        else:
+            secs.append([h, ls])
+    body = "".join(pre).rstrip("\n") + "\n"
+    for h, ls in secs:
+        body += "\n" + "".join(ls).rstrip("\n") + "\n"
+    tomllib.loads(body)  # raises if the merge produced invalid TOML
+    return body
+
+
+def merged_config(h, home, machine_dir):
+    fname = HARNESS_CONFIG.get(h)
+    if not fname:
+        return None
+    srcs = [ROOT / "global" / "harness" / h / fname, machine_dir / "harness" / h / fname]
+    srcs = [s for s in srcs if s.is_file()]
+    if not srcs:
+        return None
+    target = home / fname
+    live = target.read_text() if target.is_file() else ""
+    if fname.endswith(".json"):
+        owned = {}
+        for s in srcs:
+            owned = deep_merge(owned, json.loads(s.read_text()))
+        return target, merge_json(live, owned)
+    owned = ""
+    for s in srcs:  # machine overlay merges over global before either touches the live file
+        owned = merge_toml(owned, s.read_text())
+    return target, merge_toml(live, owned)
+
+
 # ---------- desired state ----------
 def desired_files(name, machine_dir, cfg):
     """Return {abs_target_path: bytes} for every file rig manages on this machine."""
@@ -97,12 +190,15 @@ def desired_files(name, machine_dir, cfg):
     for h, hcfg in harnesses.items():
         home = Path(hcfg["home"]).expanduser()
         fname = INSTRUCTION_FILE.get(h)
+        mc = merged_config(h, home, machine_dir)
+        if mc:
+            out[mc[0]] = (mc[1].encode(), False, True)
         if fname:
             extra = ""
             if h == "claude":
                 extra = read_fragment(ROOT / "global" / "CLAUDE.md") + read_fragment(machine_dir / "CLAUDE.md")
             body = shared + (("\n" + extra) if extra else "")
-            out[home / fname] = (body.encode(), False)
+            out[home / fname] = (body.encode(), False, False)
         for sname, sdir in collect_skills(machine_dir).items():
             fm, targets, body = split_frontmatter((sdir / "SKILL.md").read_text())
             if targets is not None and h not in targets:
@@ -113,7 +209,7 @@ def desired_files(name, machine_dir, cfg):
                 rel = src.relative_to(sdir)
                 dst = home / "skills" / sname / rel
                 data = (f"---\n{fm}\n---\n{body}").encode() if rel == Path("SKILL.md") else src.read_bytes()
-                out[dst] = (data, os.access(src, os.X_OK))
+                out[dst] = (data, os.access(src, os.X_OK), False)
     return out
 
 
@@ -128,7 +224,13 @@ def plan(desired, state):
     """Classify each path: create / update / ok / prune / conflict."""
     recorded = {Path(k): v for k, v in state["files"].items()}
     actions = []  # (kind, path, new_bytes_or_None, note)
-    for p, (new, _x) in desired.items():
+    for p, (new, _x, merged) in desired.items():
+        if merged:
+            if p.is_file() and sha(p.read_bytes()) == sha(new):
+                actions.append(("ok", p, None, ""))
+            else:
+                actions.append(("merge", p, new, "owned keys merged into live file"))
+            continue
         if p.is_symlink() or any(a.is_symlink() for a in list(p.parents)[:3]):
             actions.append(("conflict", p, new, "target or ancestor is a symlink"))
             continue
@@ -179,12 +281,13 @@ def cmd_diff(actions):
 
 
 def cmd_apply(name, desired, actions, force):
+    # merged config files are never recorded in state, so removing them from the repo never prunes the live file
     conflicts = [a for a in actions if a[0] == "conflict"]
     if conflicts and not force:
         show(name, {"harnesses": []}, conflicts)
         die(f"{len(conflicts)} conflict(s); inspect with `rig diff`, then `rig apply --force` to overwrite", 2)
     for kind, p, new, _ in actions:
-        if kind in ("create", "update") or (kind == "conflict" and new is not None):
+        if kind in ("create", "update", "merge") or (kind == "conflict" and new is not None):
             p.parent.mkdir(parents=True, exist_ok=True)
             if p.is_symlink():
                 p.unlink()
@@ -199,7 +302,7 @@ def cmd_apply(name, desired, actions, force):
             while d.name != "skills" and d.exists() and not any(d.iterdir()):
                 d.rmdir(); d = d.parent
     STATE.parent.mkdir(parents=True, exist_ok=True)
-    STATE.write_text(json.dumps({"machine": name, "files": {str(p): sha(b) for p, (b, _x) in desired.items()}}, indent=1, sort_keys=True))
+    STATE.write_text(json.dumps({"machine": name, "files": {str(p): sha(b) for p, (b, _x, m) in desired.items() if not m}}, indent=1, sort_keys=True))
     print(f"state: {STATE}  ({len(desired)} managed files)")
 
 

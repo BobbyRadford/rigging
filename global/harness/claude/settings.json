@@ -1,0 +1,33 @@
+{
+  "model": "claude-opus-4-6[1m]",
+  "effortLevel": "xhigh",
+  "permissions": {
+    "defaultMode": "acceptEdits"
+  },
+  "tui": "fullscreen",
+  "voice": {
+    "enabled": true,
+    "mode": "hold"
+  },
+  "preferredNotifChannel": "iterm2_with_bell",
+  "skipDangerousModePermissionPrompt": true,
+  "skipWorkflowUsageWarning": true,
+  "enabledPlugins": {
+    "frontend-design@claude-plugins-official": true,
+    "playwright@claude-plugins-official": true,
+    "gopls-lsp@claude-plugins-official": true,
+    "swift-lsp@claude-plugins-official": true,
+    "clangd-lsp@claude-plugins-official": true,
+    "rust-analyzer-lsp@claude-plugins-official": true,
+    "demofly@demofly-marketplace": true,
+    "diagram-design@diagram-design": true
+  },
+  "extraKnownMarketplaces": {
+    "diagram-design": {
+      "source": {
+        "source": "github",
+        "repo": "cathrynlavery/diagram-design"
+      }
+    }
+  }
+}

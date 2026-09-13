@@ -18,6 +18,10 @@ description: Apply, inspect, or extend the rigging repo - fan out global/machine
 1. Create `global/skills/<name>/SKILL.md` with `name`, `description`, and `harnesses: [claude, codex]` (inline list only; omit for all). Put it under `machines/<m>/skills/` instead if it is machine-specific.
 2. `bin/rig status` should list it as `create` for each target harness, then `bin/rig apply`.
 
+## Change a harness preference
+
+Edit `global/harness/claude/settings.json` or `global/harness/codex/config.toml` (or the machine overlay under `machines/<m>/harness/<h>/`), then `bin/rig apply`. Status shows the file as `merge`. Never edit `~/.claude/settings.json` or `~/.codex/config.toml` by hand for keys rig owns; the next apply puts them back.
+
 ## Add a machine
 
 1. `hostname -s` on that machine.
