@@ -1,0 +1,4 @@
+interface:
+  display_name: "ARC Steward"
+  short_description: "Find the next evidence-backed ARC improvement"
+  default_prompt: "Use $arc-steward to run a read-only observation pass on one ARC capability and recommend the highest-value bounded improvement."

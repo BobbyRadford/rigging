@@ -1,0 +1,229 @@
+#!/usr/bin/env python3
+"""rig - fan out shared agent-harness config to this machine.
+
+Source of truth is this repo. `rig apply` writes generated files into each
+harness home (~/.claude, ~/.codex, ...) for the current machine and records
+what it wrote in ~/.rig/state.json so later runs can update, prune, and
+detect hand edits.
+
+Usage:
+  rig status            show machine, harnesses, and pending changes
+  rig diff              unified diff of pending changes
+  rig apply [--force]   write changes; --force overwrites hand-edited targets
+  rig machine           print the resolved machine name
+
+Machine selection: $RIG_MACHINE, else match `hostname -s` against
+machines/*/machine.toml.
+"""
+import difflib, hashlib, json, os, re, socket, sys, tomllib
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+STATE = Path(os.environ.get("RIG_STATE", "~/.rig/state.json")).expanduser()
+INSTRUCTION_FILE = {"claude": "CLAUDE.md", "codex": "AGENTS.md"}
+HARNESSES_RE = re.compile(r"^harnesses:\s*\[(.*)\]\s*$", re.M)
+
+
+def die(msg, code=1):
+    print(f"rig: {msg}", file=sys.stderr)
+    sys.exit(code)
+
+
+def sha(b: bytes) -> str:
+    return hashlib.sha256(b).hexdigest()
+
+
+# ---------- machine ----------
+def load_machines():
+    out = {}
+    for f in sorted((ROOT / "machines").glob("*/machine.toml")):
+        cfg = tomllib.loads(f.read_text())
+        out[f.parent.name] = (f.parent, cfg)
+    return out
+
+
+def resolve_machine():
+    machines = load_machines()
+    want = os.environ.get("RIG_MACHINE")
+    if want:
+        if want not in machines:
+            die(f"RIG_MACHINE={want} has no machines/{want}/machine.toml")
+        return want, *machines[want]
+    host = socket.gethostname().split(".")[0]
+    hits = [n for n, (_, c) in machines.items() if c.get("hostname") == host]
+    if len(hits) != 1:
+        die(f"hostname {host!r} matched {len(hits)} machines; set RIG_MACHINE or add machines/<name>/machine.toml")
+    return hits[0], *machines[hits[0]]
+
+
+# ---------- skills ----------
+def split_frontmatter(text: str):
+    """Return (frontmatter_without_harnesses, harnesses_or_None, body)."""
+    m = re.match(r"^---\n(.*?)\n---\n?(.*)$", text, re.S)
+    if not m:
+        die("SKILL.md has no frontmatter")
+    fm, body = m.group(1), m.group(2)
+    h = HARNESSES_RE.search(fm)
+    harnesses = None
+    if h:
+        harnesses = [x.strip().strip("'\"") for x in h.group(1).split(",") if x.strip()]
+        fm = HARNESSES_RE.sub("", fm).strip("\n")
+    return fm, harnesses, body
+
+
+def collect_skills(machine_dir):
+    """name -> source dir; machine skills override global ones."""
+    skills = {}
+    for base in (ROOT / "global" / "skills", machine_dir / "skills"):
+        if base.is_dir():
+            for d in sorted(base.iterdir()):
+                if (d / "SKILL.md").is_file():
+                    skills[d.name] = d
+    return skills
+
+
+def read_fragment(p: Path) -> str:
+    return p.read_text().rstrip("\n") + "\n" if p.is_file() else ""
+
+
+# ---------- desired state ----------
+def desired_files(name, machine_dir, cfg):
+    """Return {abs_target_path: bytes} for every file rig manages on this machine."""
+    harnesses = cfg.get("harnesses", {})
+    if not harnesses:
+        die(f"machines/{name}/machine.toml declares no [harnesses]")
+    out = {}  # path -> (bytes, executable)
+    shared = read_fragment(ROOT / "global" / "AGENTS.md") + read_fragment(machine_dir / "AGENTS.md")
+    for h, hcfg in harnesses.items():
+        home = Path(hcfg["home"]).expanduser()
+        fname = INSTRUCTION_FILE.get(h)
+        if fname:
+            extra = ""
+            if h == "claude":
+                extra = read_fragment(ROOT / "global" / "CLAUDE.md") + read_fragment(machine_dir / "CLAUDE.md")
+            body = shared + (("\n" + extra) if extra else "")
+            out[home / fname] = (body.encode(), False)
+        for sname, sdir in collect_skills(machine_dir).items():
+            fm, targets, body = split_frontmatter((sdir / "SKILL.md").read_text())
+            if targets is not None and h not in targets:
+                continue
+            for src in sdir.rglob("*"):
+                if not src.is_file() or "__pycache__" in src.parts or ".pytest_cache" in src.parts:
+                    continue
+                rel = src.relative_to(sdir)
+                dst = home / "skills" / sname / rel
+                data = (f"---\n{fm}\n---\n{body}").encode() if rel == Path("SKILL.md") else src.read_bytes()
+                out[dst] = (data, os.access(src, os.X_OK))
+    return out
+
+
+# ---------- plan ----------
+def load_state():
+    if STATE.is_file():
+        return json.loads(STATE.read_text())
+    return {"machine": None, "files": {}}
+
+
+def plan(desired, state):
+    """Classify each path: create / update / ok / prune / conflict."""
+    recorded = {Path(k): v for k, v in state["files"].items()}
+    actions = []  # (kind, path, new_bytes_or_None, note)
+    for p, (new, _x) in desired.items():
+        if p.is_symlink() or any(a.is_symlink() for a in list(p.parents)[:3]):
+            actions.append(("conflict", p, new, "target or ancestor is a symlink"))
+            continue
+        if not p.exists():
+            actions.append(("create", p, new, ""))
+            continue
+        cur = sha(p.read_bytes())
+        if cur == sha(new):
+            actions.append(("ok", p, None, ""))
+        elif p not in recorded:
+            actions.append(("conflict", p, new, "exists but not managed by rig"))
+        elif cur != recorded[p]:
+            actions.append(("conflict", p, new, "hand-edited since last apply"))
+        else:
+            actions.append(("update", p, new, ""))
+    for p, h in recorded.items():
+        if p in desired:
+            continue
+        if not p.exists():
+            actions.append(("forget", p, None, "already gone"))
+        elif sha(p.read_bytes()) != h:
+            actions.append(("conflict", p, None, "hand-edited; would prune"))
+        else:
+            actions.append(("prune", p, None, ""))
+    return actions
+
+
+def show(name, cfg, actions):
+    print(f"machine: {name}   harnesses: {', '.join(cfg['harnesses'])}")
+    counts = {}
+    for kind, p, _, note in actions:
+        counts[kind] = counts.get(kind, 0) + 1
+        if kind != "ok":
+            print(f"  {kind:8s} {p}" + (f"   ({note})" if note else ""))
+    print("  " + "  ".join(f"{k}={v}" for k, v in sorted(counts.items())))
+
+
+def cmd_diff(actions):
+    for kind, p, new, _ in actions:
+        if kind in ("update", "conflict") and new is not None and p.exists():
+            old = p.read_text(errors="replace").splitlines(keepends=True)
+            cur = new.decode(errors="replace").splitlines(keepends=True)
+            sys.stdout.writelines(difflib.unified_diff(old, cur, f"{p} (current)", f"{p} (rig)"))
+        elif kind == "create":
+            print(f"+++ create {p}")
+        elif kind == "prune":
+            print(f"--- prune  {p}")
+
+
+def cmd_apply(name, desired, actions, force):
+    conflicts = [a for a in actions if a[0] == "conflict"]
+    if conflicts and not force:
+        show(name, {"harnesses": []}, conflicts)
+        die(f"{len(conflicts)} conflict(s); inspect with `rig diff`, then `rig apply --force` to overwrite", 2)
+    for kind, p, new, _ in actions:
+        if kind in ("create", "update") or (kind == "conflict" and new is not None):
+            p.parent.mkdir(parents=True, exist_ok=True)
+            if p.is_symlink():
+                p.unlink()
+            p.write_bytes(new)
+            if desired[p][1]:
+                p.chmod(p.stat().st_mode | 0o111)
+            print(f"  wrote  {p}")
+        elif kind in ("prune",) or (kind == "conflict" and new is None):
+            p.unlink()
+            print(f"  pruned {p}")
+            d = p.parent
+            while d.name != "skills" and d.exists() and not any(d.iterdir()):
+                d.rmdir(); d = d.parent
+    STATE.parent.mkdir(parents=True, exist_ok=True)
+    STATE.write_text(json.dumps({"machine": name, "files": {str(p): sha(b) for p, (b, _x) in desired.items()}}, indent=1, sort_keys=True))
+    print(f"state: {STATE}  ({len(desired)} managed files)")
+
+
+def main(argv):
+    cmd = argv[1] if len(argv) > 1 else "status"
+    force = "--force" in argv
+    name, mdir, cfg = resolve_machine()
+    if cmd == "machine":
+        print(name); return
+    desired = desired_files(name, mdir, cfg)
+    state = load_state()
+    if state["machine"] not in (None, name):
+        die(f"state file belongs to machine {state['machine']!r}, not {name!r}")
+    actions = plan(desired, state)
+    if cmd == "status":
+        show(name, cfg, actions)
+        sys.exit(2 if any(a[0] == "conflict" for a in actions) else 0)
+    elif cmd == "diff":
+        cmd_diff(actions)
+    elif cmd == "apply":
+        cmd_apply(name, desired, actions, force)
+    else:
+        die(__doc__)
+
+
+if __name__ == "__main__":
+    main(sys.argv)

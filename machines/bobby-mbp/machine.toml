@@ -1,0 +1,10 @@
+# Bobby's MacBook Pro (M-series, macOS 15)
+name = "bobby-mbp"
+hostname = "Bobbys-MacBook-Pro"   # must equal `hostname -s`
+os = "macos"
+
+[harnesses.claude]
+home = "~/.claude"
+
+[harnesses.codex]
+home = "~/.codex"
