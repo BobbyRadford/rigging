@@ -1,0 +1,7 @@
+# Shared Rownd Linux box; rig runs as the bobby account. Claude Code only, no Codex.
+name = "pasture1"
+hostname = "pasture1"   # must equal `hostname -s`
+os = "linux"
+
+[harnesses.claude]
+home = "~/.claude"

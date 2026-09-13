@@ -8,6 +8,6 @@ bin/rig diff            # unified diff of pending changes
 bin/rig apply [--force] # write to ~/.claude, ~/.codex, ...; --force overwrites hand edits
 ```
 
-New machine: clone, add `machines/<name>/machine.toml` (see `machines/bobby-mbp`), run `bin/rig apply`.
+New machine: add `machines/<name>/machine.toml` (see `machines/bobby-mbp`), clone to `~/projects/BobbyRadford/rigging` there, run `bin/rig apply`.
 
 See `AGENTS.md` for layout, skill format, and rules.

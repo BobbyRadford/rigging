@@ -11,7 +11,15 @@ Source of truth for the config that every one of Bobby's machines carries: agent
 - `machines/<name>/machine.toml`: which harnesses live where on that machine. `hostname` must equal `hostname -s`.
 - `machines/<name>/{AGENTS.md,CLAUDE.md,skills/}`: machine-only fragments and skills. A machine skill with the same name replaces the global one.
 - `bin/rig`: `status`, `diff`, `apply [--force]`, `machine`. Python 3.11+, stdlib only.
-- `.agents/skills/`: skills for working in this repo (Codex path; `.claude/skills` symlinks to it).
+- `.agents/skills/`: skills for working in this repo (Codex path; `.claude/skills` symlinks to it). `rig-apply` covers running rig locally or over ssh.
+
+## Common edits
+
+Every edit ends with `bin/rig apply` on each affected machine (see the `rig-apply` skill for the remote flow).
+
+- **Add a skill**: create `global/skills/<name>/SKILL.md` with `name`, `description`, and optionally `harnesses: [claude, codex]` as an inline list. Put it under `machines/<m>/skills/` if it is machine-specific. `bin/rig status` lists it as `create` per target harness.
+- **Change a harness preference**: edit `global/harness/claude/settings.json` or `global/harness/codex/config.toml`, or the machine overlay under `machines/<m>/harness/<h>/`. Status shows the live file as `merge`. Never hand-edit the live file for keys rig owns; the next apply puts them back.
+- **Add a machine**: run `hostname -s` there, create `machines/<name>/machine.toml` with `name`, `hostname`, `os`, and a `[harnesses.<h>]` table with `home` for each harness installed there (copy `machines/bobby-mbp`). Clone the repo to `~/projects/BobbyRadford/rigging` on that machine and apply.
 
 ## Rules
 
