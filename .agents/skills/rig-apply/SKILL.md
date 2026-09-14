@@ -26,4 +26,19 @@ rig resolves the machine from `hostname -s`, so the remote needs a `machines/<na
 
 ## Summary output
 
-After applying changes to a machine or set of machines, provide a formatted output with details about the apply, and success or failure icon. 
+After every apply, end with a terse log in a fenced code block: one fixed-width line per machine, then a totals footer. Nothing else goes in the block.
+
+```
+✅ bobby-mbp   328299f  wrote=1 pruned=0 ok=21
+❌ pasture1    328299f  conflict: ~/.claude/settings.json (hand-edited)
+── 1/2 machines applied, 1 conflict
+```
+
+Rules:
+
+- Icon: `✅` applied cleanly, `❌` conflict, ssh failure, or non-zero exit. Put the reason after the commit instead of the counts.
+- Commit: short sha the machine applied. If a remote could not pull, show the sha it is still on.
+- Counts come straight from `bin/rig apply` / `bin/rig status`: `wrote`, `pruned`, `ok`. Always show all three, even when zero.
+- Footer: `── <applied>/<total> machines applied, <n> conflicts`. Say `0 conflicts` when clean.
+- Pad machine names so the sha column lines up. Machines in the order they were applied.
+- One or two sentences of prose before the block if something needs explaining (what changed, why a machine was skipped). No prose after it.
