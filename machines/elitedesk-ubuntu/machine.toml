@@ -1,0 +1,10 @@
+# Homelab Ubuntu box (EliteDesk). Claude Code and Codex.
+name = "elitedesk-ubuntu"
+hostname = "elitedesk-ubuntu"   # must equal `hostname -s`
+os = "linux"
+
+[harnesses.claude]
+home = "~/.claude"
+
+[harnesses.codex]
+home = "~/.codex"

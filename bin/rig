@@ -11,6 +11,14 @@ Usage:
   rig diff              unified diff of pending changes
   rig apply [--force]   write changes; --force overwrites hand-edited targets
   rig machine           print the resolved machine name
+  rig secret set NAME   store a secret value for this machine (value from stdin)
+  rig secret list       show which declared secrets are present here
+
+Secrets: global/secrets.toml declares the NAMES of secrets every machine
+should carry; values never enter the repo. `rig secret set` stores them in
+~/.rig/secrets.json (0600) and apply injects each one into the harness env
+(claude settings.json "env", codex [shell_environment_policy.set]) so agent
+shells see it. Missing values are reported by status and skipped.
 
 Machine selection: $RIG_MACHINE, else match `hostname -s` against
 machines/*/machine.toml.
@@ -91,6 +99,53 @@ def read_fragment(p: Path) -> str:
     return p.read_text().rstrip("\n") + "\n" if p.is_file() else ""
 
 
+# ---------- secrets ----------
+SECRETS = STATE.parent / "secrets.json"
+
+
+def declared_secrets():
+    f = ROOT / "global" / "secrets.toml"
+    return tomllib.loads(f.read_text()).get("secrets", {}) if f.is_file() else {}
+
+
+def load_secrets():
+    return json.loads(SECRETS.read_text()) if SECRETS.is_file() else {}
+
+
+def missing_secrets():
+    have = load_secrets()
+    return [n for n in declared_secrets() if not have.get(n)]
+
+
+def secret_env():
+    """Declared secrets that have a value on this machine, as {NAME: value}."""
+    have = load_secrets()
+    return {n: have[n] for n in declared_secrets() if have.get(n)}
+
+
+def cmd_secret(argv):
+    sub = argv[2] if len(argv) > 2 else "list"
+    if sub == "list":
+        have = load_secrets()
+        for n, desc in declared_secrets().items():
+            print(f"  {'set    ' if have.get(n) else 'MISSING'} {n}   {desc}")
+        return
+    if sub == "set" and len(argv) > 3:
+        name = argv[3]
+        if name not in declared_secrets():
+            die(f"{name} is not declared in global/secrets.toml")
+        value = sys.stdin.readline().strip()
+        if not value:
+            die("no value on stdin; use: printf %s \"$VALUE\" | rig secret set NAME")
+        SECRETS.parent.mkdir(parents=True, exist_ok=True)
+        data = load_secrets(); data[name] = value
+        SECRETS.write_text(json.dumps(data, indent=1, sort_keys=True) + "\n")
+        SECRETS.chmod(0o600)
+        print(f"stored {name} in {SECRETS}; run `rig apply` to inject it")
+        return
+    die("usage: rig secret list | rig secret set NAME  (value on stdin)")
+
+
 # ---------- merged harness config ----------
 HARNESS_CONFIG = {"claude": "settings.json", "codex": "config.toml"}
 
@@ -164,18 +219,24 @@ def merged_config(h, home, machine_dir):
         return None
     srcs = [ROOT / "global" / "harness" / h / fname, machine_dir / "harness" / h / fname]
     srcs = [s for s in srcs if s.is_file()]
-    if not srcs:
+    if not srcs and not secret_env():
         return None
     target = home / fname
     live = target.read_text() if target.is_file() else ""
+    env = secret_env()
     if fname.endswith(".json"):
         owned = {}
         for s in srcs:
             owned = deep_merge(owned, json.loads(s.read_text()))
+        if env:
+            owned = deep_merge(owned, {"env": env})
         return target, merge_json(live, owned)
     owned = ""
     for s in srcs:  # machine overlay merges over global before either touches the live file
         owned = merge_toml(owned, s.read_text())
+    if env:
+        block = "[shell_environment_policy.set]\n" + "".join(f"{k} = {json.dumps(v)}\n" for k, v in env.items())
+        owned = merge_toml(owned, block)
     return target, merge_toml(live, owned)
 
 
@@ -260,6 +321,8 @@ def plan(desired, state):
 
 def show(name, cfg, actions):
     print(f"machine: {name}   harnesses: {', '.join(cfg['harnesses'])}")
+    for n in missing_secrets():
+        print(f"  secret   {n} not set; printf %s \"$VALUE\" | bin/rig secret set {n}")
     counts = {}
     for kind, p, _, note in actions:
         counts[kind] = counts.get(kind, 0) + 1
@@ -312,6 +375,8 @@ def main(argv):
     name, mdir, cfg = resolve_machine()
     if cmd == "machine":
         print(name); return
+    if cmd == "secret":
+        cmd_secret(argv); return
     desired = desired_files(name, mdir, cfg)
     state = load_state()
     if state["machine"] not in (None, name):

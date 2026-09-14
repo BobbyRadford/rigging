@@ -22,6 +22,17 @@ The Mac is where the repo gets edited; each machine pulls and applies itself. Pu
 3. On conflicts, run `bin/rig diff` over ssh and ask Bobby before using `--force`, same as locally.
 4. `ssh <host> 'cd ~/rigging && bin/rig apply'`.
 
+## Secrets
+
+`bin/rig status` lists any declared secret (`global/secrets.toml`) that has no value on that machine. Values are never in the repo; read the local one from `~/.rig/secrets.json` on the Mac and pipe it over:
+
+```
+python3 -c 'import json,os;print(json.load(open(os.path.expanduser("~/.rig/secrets.json")))["NAME"],end="")' \
+  | ssh <host> 'cd ~/rigging && bin/rig secret set NAME'
+```
+
+Then apply. Never echo secret values into the transcript or the summary.
+
 rig resolves the machine from `hostname -s`, so the remote needs a `machines/<name>/machine.toml` whose `hostname` matches. If status dies with "matched 0 machines", the machine is not registered yet; see AGENTS.md.
 
 ## Summary output
