@@ -15,12 +15,12 @@ description: Apply rigging changes to a machine. Use when Bobby says "rig apply"
 
 ## A remote machine
 
-The Mac is where the repo gets edited; each machine pulls and applies itself. Push first, then drive the same three steps over ssh. The clone lives at `~/projects/BobbyRadford/rigging` on every machine.
+The Mac is where the repo gets edited; each machine pulls and applies itself. Push first, then drive the same three steps over ssh. The clone lives at `~/rigging` on every machine.
 
 1. Commit and push the change.
-2. `ssh <host> 'cd ~/projects/BobbyRadford/rigging && git pull --ff-only && bin/rig status'`. If `~/projects/BobbyRadford/rigging` is missing, clone `https://github.com/BobbyRadford/rigging.git` there first.
+2. `ssh <host> 'cd ~/rigging && git pull --ff-only && bin/rig status'`. If `~/rigging` is missing, clone `https://github.com/BobbyRadford/rigging.git` there first.
 3. On conflicts, run `bin/rig diff` over ssh and ask Bobby before using `--force`, same as locally.
-4. `ssh <host> 'cd ~/projects/BobbyRadford/rigging && bin/rig apply'`.
+4. `ssh <host> 'cd ~/rigging && bin/rig apply'`.
 
 rig resolves the machine from `hostname -s`, so the remote needs a `machines/<name>/machine.toml` whose `hostname` matches. If status dies with "matched 0 machines", the machine is not registered yet; see AGENTS.md.
 

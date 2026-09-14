@@ -17,7 +17,7 @@ Source of truth for the config that every one of Bobby's machines carries: agent
 
 - **Add a skill**: create `global/skills/<name>/SKILL.md` with `name`, `description`, and optionally `harnesses: [claude, codex]` as an inline list. Put it under `machines/<m>/skills/` if it is machine-specific. `bin/rig status` lists it as `create` per target harness.
 - **Change a harness preference**: edit `global/harness/claude/settings.json` or `global/harness/codex/config.toml`, or the machine overlay under `machines/<m>/harness/<h>/`. Status shows the live file as `merge`. Never hand-edit the live file for keys rig owns; the next apply puts them back.
-- **Add a machine**: run `hostname -s` there, create `machines/<name>/machine.toml` with `name`, `hostname`, `os`, and a `[harnesses.<h>]` table with `home` for each harness installed there (copy `machines/bobby-mbp`). Clone the repo to `~/projects/BobbyRadford/rigging` on that machine and apply.
+- **Add a machine**: run `hostname -s` there, create `machines/<name>/machine.toml` with `name`, `hostname`, `os`, and a `[harnesses.<h>]` table with `home` for each harness installed there (copy `machines/bobby-mbp`). Clone the repo to `~/rigging` on that machine and apply.
 
 ## Rules
 
