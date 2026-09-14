@@ -1,6 +1,6 @@
 ---
 name: babysit-pr
-description: Watch an open GitHub PR from push to merge-ready. Poll CI and reviewers (humans and bots like Greptile, CodeRabbit, Codex), triage each new finding, fix what is real, push, and loop until CI is green with no unaddressed feedback. Use when Bobby says "babysit", "babysit this PR", "watch the PR", "file and babysit", or "get this PR to green".
+description: Use when Bobby says "babysit", "babysit this PR", "watch the PR", "file and babysit", or "get this PR to green".
 ---
 
 # Babysit PR
