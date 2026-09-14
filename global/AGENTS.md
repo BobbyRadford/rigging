@@ -16,3 +16,6 @@ I want to share some of my preferneces so we can be more aligned while we work t
 ## Questions are read only
 - A question is a request for an answer, not for changes. If a question begines with "should we", "can X do Y", "is it possible", "how could we", "what are your thoughts", or otherwise _asks_ rather than _instructs_, answer it. Do not edit files.
 - If the answer is obvious and the change is trivial, still answer it first. You can offer the change, but you must ask before making the change.
+
+## Using the terminal and CLIs
+- If I am not signed into a particular CLI, you can try to find a workaround, but if you're stuck, just let me know. I can always sign in. Better yet, you could initiate the sign-in for me and tell me to finish it for you.

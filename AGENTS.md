@@ -40,3 +40,7 @@ Use these rules when doing _Computer use_ or _Computer automation_
 ## Working on tickets
 
 We use Linear as a team for ticket tracking and planning work. Often times, my coworkers have a bad habit of proposing exact architecture and implementation details in the ticket itself. When you start working on a ticket, you should take those suggestions with a grain of salt. Instead of doing what the ticket says ver-batum, you should first distill the ticket into the problem it is trying to solve and the "why" behind it. From there you can use the suggested architecture as reference, treating it as one of many potential approaches to take. Pick out the useful pieces. Drop the rest.
+
+## SSH
+
+- Never attempt to ssh to our machines through cloudflare *.rownd.ai tunnels. Always use tailscale or direct IP or *.local addresses
