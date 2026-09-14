@@ -15,15 +15,15 @@ Source of truth for the config that every one of Bobby's machines carries: agent
 
 ## Common edits
 
-Every edit ends with `bin/rig apply` on each affected machine (see the `rig-apply` skill for the remote flow).
-
 - **Add a skill**: create `global/skills/<name>/SKILL.md` with `name`, `description`, and optionally `harnesses: [claude, codex]` as an inline list. Put it under `machines/<m>/skills/` if it is machine-specific. `bin/rig status` lists it as `create` per target harness.
 - **Change a harness preference**: edit `global/harness/claude/settings.json` or `global/harness/codex/config.toml`, or the machine overlay under `machines/<m>/harness/<h>/`. Status shows the live file as `merge`. Never hand-edit the live file for keys rig owns; the next apply puts them back.
 - **Add a machine**: run `hostname -s` there, create `machines/<name>/machine.toml` with `name`, `hostname`, `os`, and a `[harnesses.<h>]` table with `home` for each harness installed there (copy `machines/bobby-mbp`). Clone the repo to `~/projects/BobbyRadford/rigging` on that machine and apply.
 
 ## Rules
 
-- Edit here, then `bin/rig apply`. Never edit generated files in `~/.claude` or `~/.codex`; rig detects hand edits and refuses to overwrite without `--force`.
+- Prefer making changes in new commits directly on main rather than feature branches or worktrees
+- Once you finish making changes, offer to apply to all the affected machines if not already requested to do so.
+- Never edit generated files in `~/.claude` or `~/.codex`; rig detects hand edits and refuses to overwrite without `--force`.
 - No secrets, no absolute `/Users/...` paths. This repo is public.
 - Only preferences go in `global/harness/*`. Do not add project trust lists, app-internal paths, or anything the app rewrites on its own. MCP servers with machine-specific paths belong in a machine overlay or nowhere.
 - Skill `name` must equal its directory name.

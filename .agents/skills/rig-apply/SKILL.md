@@ -1,6 +1,6 @@
 ---
 name: rig-apply
-description: Apply the rigging repo to a machine - run bin/rig on this box, or over ssh on a remote one, so its ~/.claude and ~/.codex match the repo. Use when Bobby says "rig apply", "sync my agent config", or "apply rigging to <machine>".
+description: Apply rigging changes to a machine. Use when Bobby says "rig apply", "sync my agent config", or "apply rigging to <machine>", or simply "rig"
 ---
 
 # rig-apply
@@ -23,3 +23,7 @@ The Mac is where the repo gets edited; each machine pulls and applies itself. Pu
 4. `ssh <host> 'cd ~/projects/BobbyRadford/rigging && bin/rig apply'`.
 
 rig resolves the machine from `hostname -s`, so the remote needs a `machines/<name>/machine.toml` whose `hostname` matches. If status dies with "matched 0 machines", the machine is not registered yet; see AGENTS.md.
+
+## Summary output
+
+After applying changes to a machine or set of machines, provide a formatted output with details about the apply, and success or failure icon. 
