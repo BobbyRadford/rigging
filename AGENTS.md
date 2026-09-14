@@ -29,3 +29,14 @@ Source of truth for the config that every one of Bobby's machines carries: agent
 - No secrets, no absolute `/Users/...` paths. This repo is public.
 - Only preferences go in `global/harness/*`. Do not add project trust lists, app-internal paths, or anything the app rewrites on its own. MCP servers with machine-specific paths belong in a machine overlay or nowhere.
 - Skill `name` must equal its directory name.
+
+## Computer use
+
+Use these rules when doing _Computer use_ or _Computer automation_
+
+- Use /Applications/Arc.app as your default browser
+- Don't try to use iTerm or Terminal with computer use. Instead, use normal shell commands as you would for other cirucumstances
+
+## Working on tickets
+
+We use Linear as a team for ticket tracking and planning work. Often times, my coworkers have a bad habit of proposing exact architecture and implementation details in the ticket itself. When you start working on a ticket, you should take those suggestions with a grain of salt. Instead of doing what the ticket says ver-batum, you should first distill the ticket into the problem it is trying to solve and the "why" behind it. From there you can use the suggested architecture as reference, treating it as one of many potential approaches to take. Pick out the useful pieces. Drop the rest.

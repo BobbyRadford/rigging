@@ -7,6 +7,8 @@ description: Apply rigging changes to a machine. Use when Bobby says "rig apply"
 
 `bin/rig` is deterministic; you run it and interpret the output. It reads the repo it lives in and writes into the invoking user's `$HOME`, so the repo must be cloned on the machine being configured and rig must run there as the target user. Never copy files into harness homes by hand.
 
+- If a specific machine is not specified, you should apply to all of the machines
+
 ## This machine
 
 1. `bin/rig status`. Exit 2 means conflicts.
