@@ -5,7 +5,7 @@ description: Watch an open GitHub PR from push to merge-ready. Poll CI and revie
 
 # Babysit PR
 
-Keep a PR moving without Bobby watching it. After the branch is pushed, the only thing left is reacting to CI and reviewers, and that reaction loop is mechanical enough to hand off. This skill owns the loop. The per-thread fixing rules live in `address-pr-comments`; follow that skill for how to fix, commit, reply, and resolve each item.
+Keep a PR moving without Bobby watching it. After the branch is pushed, the only thing left is reacting to CI and reviewers, and that reaction loop is mechanical enough to hand off. This skill owns the loop, including fixing, committing, replying, and resolving each item.
 
 Modes, picked from how Bobby phrased it:
 
@@ -36,7 +36,7 @@ Everything after the watermark, from all three sources:
 - Unresolved review threads and PR-level comments created after the watermark.
 - Formal reviews (approve, request changes) submitted after the watermark.
 
-Skip anything Bobby's own account wrote, anything already resolved, and pure approvals or "LGTM". Fetch commands are in `address-pr-comments`, phase 2.
+Skip anything Bobby's own account wrote, anything already resolved, and pure approvals or "LGTM". Use `gh pr view <n> --json reviews,comments` for formal reviews and PR-level comments, and `gh api repos/<owner>/<repo>/pulls/<n>/comments --paginate` for inline comments. Fetch review threads through GraphQL to check `isResolved`, paginating until all threads and their comments have been read. Inspect failed checks with `gh run view <run-id> --log-failed`.
 
 ## 4. Triage
 
@@ -52,7 +52,7 @@ CI failures are always Fix unless the failure is a known-flaky test, in which ca
 
 ## 5. Fix, push, loop
 
-Apply the fix rules from `address-pr-comments`: one commit per thread or root cause, focused verification, reply and resolve the thread, then push. Never force-push, never `git add -A`, never touch files outside the PR's scope unless a fix requires it.
+Make one commit per thread or CI root cause after focused verification. For fixed review threads, reply with the commit SHA and resolve the thread, then push. Never force-push, never `git add -A`, never touch files outside the PR's scope unless a fix requires it.
 
 If the base branch moved and the PR shows `mergeStateStatus` of `DIRTY` or `BEHIND`, rebase onto the base branch and push with `--force-with-lease`. This is the one exception to the no-force-push rule. Stop and report if the rebase hits conflicts you cannot resolve with confidence.
 
