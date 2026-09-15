@@ -1,0 +1,10 @@
+# Rownd Mac build box; rig runs as the bobby account. Claude Code and Codex.
+name = "rownd-mac-build-1"
+hostname = "rownd-mac-build-1"   # must equal `hostname -s`
+os = "macos"
+
+[harnesses.claude]
+home = "~/.claude"
+
+[harnesses.codex]
+home = "~/.codex"
