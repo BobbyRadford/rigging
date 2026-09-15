@@ -29,5 +29,9 @@
         "repo": "cathrynlavery/diagram-design"
       }
     }
+  },
+  "env": {
+    "ANTHROPIC_BASE_URL": "http://pasture1:8317",
+    "ANTHROPIC_AUTH_TOKEN": "${CLIPROXY_TOKEN}"
   }
 }

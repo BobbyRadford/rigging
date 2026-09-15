@@ -1,5 +1,7 @@
 # Keys and tables here are merged into ~/.codex/config.toml by `rig apply`.
 # Anything not listed (project trust, marketplaces, plugin state, app paths) is left to Codex.
+# Route Codex through CLIProxyAPI on pasture1 (pooled ChatGPT subscriptions).
+model_provider = "cliproxyapi"
 model = "gpt-6-astra"
 model_reasoning_effort = "low"
 plan_mode_reasoning_effort = "xhigh"
@@ -55,6 +57,13 @@ approval_mode = "approve"
 
 [mcp_servers.code-review-graph.tools.get_architecture_overview_tool]
 approval_mode = "approve"
+
+[model_providers.cliproxyapi]
+name = "OpenAI"
+base_url = "http://pasture1:8317/v1"
+wire_api = "responses"
+requires_openai_auth = true
+experimental_bearer_token = "${CLIPROXY_TOKEN}"
 
 [[skills.config]]
 name = "github:gh-address-comments"

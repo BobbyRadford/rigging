@@ -18,7 +18,9 @@ Secrets: global/secrets.toml declares the NAMES of secrets every machine
 should carry; values never enter the repo. `rig secret set` stores them in
 ~/.rig/secrets.json (0600) and apply injects each one into the harness env
 (claude settings.json "env", codex [shell_environment_policy.set]) so agent
-shells see it. Missing values are reported by status and skipped.
+shells see it. Harness config files may also reference a secret as ${NAME}
+anywhere in their text; apply substitutes the value. Missing values are
+reported by status and skipped (placeholders are left as-is).
 
 Machine selection: $RIG_MACHINE, else match `hostname -s` against
 machines/*/machine.toml.
@@ -121,6 +123,12 @@ def secret_env():
     """Declared secrets that have a value on this machine, as {NAME: value}."""
     have = load_secrets()
     return {n: have[n] for n in declared_secrets() if have.get(n)}
+
+
+def expand_secrets(text: str) -> str:
+    """Replace ${NAME} with the declared secret's value; unknown or unset names are left untouched."""
+    have = secret_env()
+    return re.sub(r"\$\{([A-Z0-9_]+)\}", lambda m: have.get(m.group(1), m.group(0)), text)
 
 
 def cmd_secret(argv):
@@ -227,13 +235,13 @@ def merged_config(h, home, machine_dir):
     if fname.endswith(".json"):
         owned = {}
         for s in srcs:
-            owned = deep_merge(owned, json.loads(s.read_text()))
+            owned = deep_merge(owned, json.loads(expand_secrets(s.read_text())))
         if env:
             owned = deep_merge(owned, {"env": env})
         return target, merge_json(live, owned)
     owned = ""
     for s in srcs:  # machine overlay merges over global before either touches the live file
-        owned = merge_toml(owned, s.read_text())
+        owned = merge_toml(owned, expand_secrets(s.read_text()))
     if env:
         block = "[shell_environment_policy.set]\n" + "".join(f"{k} = {json.dumps(v)}\n" for k, v in env.items())
         owned = merge_toml(owned, block)
