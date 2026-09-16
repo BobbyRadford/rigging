@@ -7,6 +7,7 @@ Source of truth for the config that every one of Bobby's machines carries: agent
 - `global/AGENTS.md`: shared directives, becomes the body of `~/.codex/AGENTS.md` and `~/.claude/CLAUDE.md`.
 - `global/CLAUDE.md`: optional Claude-only fragment appended to `~/.claude/CLAUDE.md`.
 - `global/skills/<name>/`: skills in Agent Skills format plus an optional `harnesses: [claude, codex]` frontmatter line. Omit it to target every harness. The line is stripped on output.
+- `global/skills/<group>/<name>/`: a directory with no `SKILL.md` is a group, e.g. `matt-pocock/` for skills vendored from [mattpocock/skills](https://github.com/mattpocock/skills). The group name is not part of the skill name; the skill lands at `skills/<name>/` on the machine.
 - `global/harness/claude/settings.json`, `global/harness/codex/config.toml`: the keys and tables rig owns. They are merged key by key into the live file on apply; everything else in the live file (project trust, permission allowlists the app appends, marketplaces, app paths) is left alone. Machine overlays live at `machines/<name>/harness/<h>/` and merge on top of global. Merged files are never pruned and never conflict.
 - `machines/<name>/machine.toml`: which harnesses live where on that machine. `hostname` must equal `hostname -s`.
 - `machines/<name>/{AGENTS.md,CLAUDE.md,skills/}`: machine-only fragments and skills. A machine skill with the same name replaces the global one.

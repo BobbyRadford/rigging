@@ -87,13 +87,24 @@ def split_frontmatter(text: str):
 
 
 def collect_skills(machine_dir):
-    """name -> source dir; machine skills override global ones."""
+    """name -> source dir; machine skills override global ones.
+
+    A directory without a SKILL.md is a group (e.g. skills/matt-pocock/) and its
+    children are scanned instead. The group name is not part of the skill name.
+    """
     skills = {}
     for base in (ROOT / "global" / "skills", machine_dir / "skills"):
-        if base.is_dir():
-            for d in sorted(base.iterdir()):
-                if (d / "SKILL.md").is_file():
-                    skills[d.name] = d
+        if not base.is_dir():
+            continue
+        for d in sorted(base.iterdir()):
+            if not d.is_dir():
+                continue
+            if (d / "SKILL.md").is_file():
+                skills[d.name] = d
+            else:
+                for sub in sorted(d.iterdir()):
+                    if (sub / "SKILL.md").is_file():
+                        skills[sub.name] = sub
     return skills
 
 
