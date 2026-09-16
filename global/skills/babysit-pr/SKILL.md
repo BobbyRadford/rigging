@@ -16,7 +16,7 @@ Modes, picked from how Bobby phrased it:
 
 `gh pr view --json number,url,state,isDraft,headRefName,baseRefName,headRefOid,mergeStateStatus`. Use the number or URL Bobby gave, otherwise the current branch. No PR on the branch: ask, do not guess. Merged or closed: stop and say so. Draft: babysit anyway, but do not mark it ready.
 
-Record the head SHA and the current time. That is the watermark: only feedback created after it counts as new.
+Record the head SHA. CI findings are scoped to it. Review feedback is scoped by state, not time: a thread is open work until it is resolved, so feedback posted before babysitting started counts too.
 
 ## 2. Wait for CI and reviewers
 
@@ -28,15 +28,16 @@ gh pr checks <n> --watch --fail-fast
 
 If checks are still in progress after `--watch` returns, or no checks exist yet, poll `gh pr checks` every 60 seconds. Then wait up to 5 more minutes for bot reviews to land, polling every 60 seconds, and stop waiting as soon as one arrives. Skip the reviewer wait if the repo has no review bots configured.
 
-## 3. Collect what is new
+## 3. Collect open work
 
-Everything after the watermark, from all three sources:
+All of it, from all three sources:
 
 - Failing or timed-out checks on the current head SHA.
-- Unresolved review threads and PR-level comments created after the watermark.
-- Formal reviews (approve, request changes) submitted after the watermark.
+- Unresolved review threads whose last comment is not from Bobby's account. A thread where Bobby's account had the last word is already answered: escalated, or waiting on the reviewer.
+- PR-level comments with no comment from Bobby's account after them.
+- A current review decision of changes requested.
 
-Skip anything Bobby's own account wrote, anything already resolved, and pure approvals or "LGTM". Use `gh pr view <n> --json reviews,comments` for formal reviews and PR-level comments, and `gh api repos/<owner>/<repo>/pulls/<n>/comments --paginate` for inline comments. Fetch review threads through GraphQL to check `isResolved`, paginating until all threads and their comments have been read. Inspect failed checks with `gh run view <run-id> --log-failed`.
+Skip pure approvals or "LGTM". Use `gh pr view <n> --json reviewDecision,comments` for the review decision and PR-level comments, and `gh api repos/<owner>/<repo>/pulls/<n>/comments --paginate` for inline comments. Fetch review threads through GraphQL to check `isResolved`, paginating until all threads and their comments have been read. Inspect failed checks with `gh run view <run-id> --log-failed`.
 
 ## 4. Triage
 
@@ -56,7 +57,7 @@ Make one commit per thread or CI root cause after focused verification. For fixe
 
 If the base branch moved and the PR shows `mergeStateStatus` of `DIRTY` or `BEHIND`, rebase onto the base branch and push with `--force-with-lease`. This is the one exception to the no-force-push rule. Stop and report if the rebase hits conflicts you cannot resolve with confidence.
 
-After every push, move the watermark to the new head SHA and go back to step 2.
+After every push, the new head SHA is the one that counts. Go back to step 2.
 
 Stop when any of these is true:
 
