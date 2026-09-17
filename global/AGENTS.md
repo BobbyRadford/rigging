@@ -19,3 +19,24 @@ I want to share some of my preferneces so we can be more aligned while we work t
 
 ## Using the terminal and CLIs
 - If I am not signed into a particular CLI, you can try to find a workaround, but if you're stuck, just let me know. I can always sign in. Better yet, you could initiate the sign-in for me and tell me to finish it for you.
+
+## Git commits and Github usage
+- Never assign coding agents like Claude or Codex as a commit author or coauthor Always exclusively author commits as me
+
+**Example Bad**
+commit c83e12c2c3be2afe080f31f2d6eeac98cda2534d
+Author: Bobby Radford <bobby@rownd.io>
+Date:   Wed Sep 16 20:33:28 2026 -0400
+
+    fix(infra): strip only the radio interface from Avahi deny-interfaces
+
+    Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
+
+**Example Good**
+commit c83e12c2c3be2afe080f31f2d6eeac98cda2534d
+Author: Bobby Radford <bobby@rownd.io>
+Date:   Wed Sep 16 20:33:28 2026 -0400
+
+    fix(infra): strip only the radio interface from Avahi deny-interfaces
+
+- Prefer using SSH to clone GitHub repos. HTTPS can be used as a fallback.
