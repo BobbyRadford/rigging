@@ -18,15 +18,15 @@ Modes, picked from how Bobby phrased it:
 
 Record the head SHA. CI findings are scoped to it. Review feedback is scoped by state, not time: a thread is open work until it is resolved, so feedback posted before babysitting started counts too.
 
-## 2. Wait for CI and reviewers
-
-Review bots post after CI finishes, so do not collect comments early.
+## 2. Wait for CI and the PR to go quiet
 
 ```bash
 gh pr checks <n> --watch --fail-fast
 ```
 
-If checks are still in progress after `--watch` returns, or no checks exist yet, poll `gh pr checks` every 60 seconds. Then wait up to 5 more minutes for bot reviews to land, polling every 60 seconds, and stop waiting as soon as one arrives. Skip the reviewer wait if the repo has no review bots configured.
+If checks are still in progress after `--watch` returns, or no checks exist yet, poll `gh pr checks` every 60 seconds until every check on the head SHA has completed.
+
+Then wait for the PR to go quiet. Do not try to predict whether a review bot will post: in arc-uas Greptile starts only after CI applies a label and takes 3 to 7 minutes from there, and any bot can silently skip a PR when its credits run out. Instead, poll `gh pr view <n> --json updatedAt` every 60 seconds and proceed only once `updatedAt` has not changed for 10 minutes. It bumps on comments, reviews, label changes, and pushes, so any late activity resets the window. A rerun of CI (`run_attempt` on the run increases) also resets it, since reruns re-apply labels and retrigger bots. Track the quiet window from the later of the last CI completion and the last `updatedAt` change.
 
 ## 3. Collect open work
 
@@ -61,7 +61,7 @@ After every push, the new head SHA is the one that counts. Go back to step 2.
 
 Stop when any of these is true:
 
-- CI is green, no unresolved threads remain except escalated ones, and no reviewer has changes requested.
+- CI is green, the PR has been quiet for 10 minutes, no unresolved threads remain except escalated ones, and no reviewer has changes requested.
 - First-round mode and one pass is done.
 - Six passes have run. Something is oscillating; report and stop.
 - A push or rebase fails.
@@ -69,4 +69,4 @@ Stop when any of these is true:
 
 ## 6. Report
 
-Two or three sentences, then a table of what happened this session: source, finding, verdict, commit or reason. End with the PR URL and its state: mergeable, waiting on Bobby, or blocked. Do not merge unless Bobby asked for that up front.
+Two or three sentences, then a table of what happened this session: source, finding, verdict, commit or reason. Say whether any review bot posted on the final head SHA; "CI green, no bot review arrived" is a distinct outcome from "bot reviewed, nothing open", because a silent bot usually means it is out of credits. End with the PR URL and its state: mergeable, waiting on Bobby, or blocked. Do not merge unless Bobby asked for that up front.
