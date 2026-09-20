@@ -26,7 +26,7 @@ gh pr checks <n> --watch --fail-fast
 
 If checks are still in progress after `--watch` returns, or no checks exist yet, poll `gh pr checks` every 60 seconds until every check on the head SHA has completed.
 
-Then wait for the PR to go quiet. Do not try to predict whether a review bot will post: in arc-uas Greptile starts only after CI applies a label and takes 3 to 7 minutes from there, and any bot can silently skip a PR when its credits run out. Instead, poll `gh pr view <n> --json updatedAt` every 60 seconds and proceed only once `updatedAt` has not changed for 10 minutes. It bumps on comments, reviews, label changes, and pushes, so any late activity resets the window. A rerun of CI (`run_attempt` on the run increases) also resets it, since reruns re-apply labels and retrigger bots. Track the quiet window from the later of the last CI completion and the last `updatedAt` change.
+Then wait for the PR to go quiet. Do not try to predict whether a review bot will post; bots start on their own triggers, take minutes to finish, and skip PRs entirely when out of credits. Poll `gh pr view <n> --json updatedAt` every 60 seconds and proceed only once `updatedAt` has not changed for 10 minutes. It bumps on comments, reviews, label changes, and pushes, so late activity resets the window. A CI rerun (`run_attempt` on the run increases) also resets it. Measure the window from the later of the last check completion and the last `updatedAt` change.
 
 ## 3. Collect open work
 
@@ -69,4 +69,4 @@ Stop when any of these is true:
 
 ## 6. Report
 
-Two or three sentences, then a table of what happened this session: source, finding, verdict, commit or reason. Say whether any review bot posted on the final head SHA; "CI green, no bot review arrived" is a distinct outcome from "bot reviewed, nothing open", because a silent bot usually means it is out of credits. End with the PR URL and its state: mergeable, waiting on Bobby, or blocked. Do not merge unless Bobby asked for that up front.
+Two or three sentences, then a table of what happened this session: source, finding, verdict, commit or reason. Say whether any review bot posted on the final head SHA; "CI green, no bot review arrived" is a distinct outcome from "bot reviewed, nothing open",. End with the PR URL and its state: mergeable, waiting on Bobby, or blocked. Do not merge unless Bobby asked for that up front.
