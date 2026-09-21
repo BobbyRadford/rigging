@@ -34,8 +34,9 @@ All of it, from all three sources:
 
 - Failing or timed-out checks on the current head SHA.
 - Unresolved review threads whose last comment is not from Bobby's account. A thread where Bobby's account had the last word is already answered: escalated, or waiting on the reviewer.
-- PR-level comments with no comment from Bobby's account after them.
+- PR-level comments with no resolving comment from Bobby's account after them.
 - A current review decision of changes requested.
+- Review bot comments and reviews are not "noise". You should always collect them for triage.
 
 Skip pure approvals or "LGTM". Use `gh pr view <n> --json reviewDecision,comments` for the review decision and PR-level comments, and `gh api repos/<owner>/<repo>/pulls/<n>/comments --paginate` for inline comments. Fetch review threads through GraphQL to check `isResolved`, paginating until all threads and their comments have been read. Inspect failed checks with `gh run view <run-id> --log-failed`.
 
