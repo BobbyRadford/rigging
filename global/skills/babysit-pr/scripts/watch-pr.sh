@@ -1,16 +1,17 @@
 #!/usr/bin/env bash
-# Block until something new happens on a PR, print it, and exit.
+# Waits until something new happens on a PR, prints it, and exits.
 #
 # Usage: watch-pr.sh <pr-number-or-url> [quiet-seconds]
 #
-# Prints one line per new event: comments, inline comments, reviews, failed
-# checks, all checks finished, head or merge-state changes, merged/closed.
-# Exits after the first batch (settled for 20s so a bot's burst of comments
-# arrives together), or prints "quiet" after quiet-seconds (default 600) with
-# nothing new. The first call on a PR prints the current state.
+# New comments, reviews, failed checks, finished CI runs, new pushes, and
+# conflicts each print as one line. Once something shows up, the script waits
+# another 20 seconds so a bot's burst of comments arrives together. If nothing
+# happens for quiet-seconds (600 by default), it prints "quiet" instead. The
+# first call on a PR prints its current state.
 #
-# Comments whose body contains <!-- babysit --> are the agent's own and are
-# skipped. Seen events persist in $TMPDIR, so each call reports only news.
+# Comments containing <!-- babysit --> were posted by the agent and are
+# ignored. Events already seen are remembered in $TMPDIR, so each call only
+# reports what's new.
 set -uo pipefail
 
 pr=${1:?usage: watch-pr.sh <pr> [quiet-seconds]}
