@@ -5,69 +5,58 @@ description: Use when Bobby says "babysit", "babysit this PR", "watch the PR", "
 
 # Babysit PR
 
-Keep a PR moving without Bobby watching it. After the branch is pushed, the only thing left is reacting to CI and reviewers, and that reaction loop is mechanical enough to hand off. This skill owns the loop, including fixing, committing, replying, and resolving each item.
+Carry an open PR to its end state without Bobby watching. React to CI and reviewers the moment they post, and stop only at the end state.
 
-Modes, picked from how Bobby phrased it:
+**End state** comes from Bobby's prompt: "until green", "merge once green", "first round only", and so on. Default: reach **done**, report, and leave the merge to Bobby.
 
-- **Full** (default): loop until done.
-- **First round**: "babysit the first round", "stop after the first set of comments". Do one pass, then stop and report. Bobby takes it from there.
+## Setup
 
-## 1. Find the PR
+Resolve the PR from the number or URL Bobby gave, else the current branch (`gh pr view --json url,state,isDraft`). No PR: ask. Merged or closed: say so and stop. Draft: babysit it, leave it draft.
 
-`gh pr view --json number,url,state,isDraft,headRefName,baseRefName,headRefOid,mergeStateStatus`. Use the number or URL Bobby gave, otherwise the current branch. No PR on the branch: ask, do not guess. Merged or closed: stop and say so. Draft: babysit anyway, but do not mark it ready.
+Find the **expected bots**: the review bots that commented on this PR or the repo's most recent merged PR.
 
-Record the head SHA. CI findings are scoped to it. Review feedback is scoped by state, not time: a thread is open work until it is resolved, so feedback posted before babysitting started counts too.
+## Loop
 
-## 2. Wait for CI and the PR to go quiet
+1. **Watch.** Run `scripts/watch-pr.sh <pr-url>` from this skill's directory, in the background where the harness supports it (Claude Code: Bash `run_in_background`), and wait for it to exit. It blocks until something new happens, prints those events, and exits; after 10 minutes with nothing new it prints `quiet`. The first call prints the current state.
+2. **Collect** all open work on the head commit, whatever the events said. Events only wake you; state decides what is open:
+   - failed checks (`gh run view <id> --log-failed`)
+   - unresolved review threads (GraphQL `reviewThreads.isResolved`, every page) whose last comment is not from Bobby's account
+   - PR-level comments with no later reply from Bobby's account
+   - a changes-requested review
+3. **Triage** each finding. A bot finding is a claim: verify it against the source first.
 
-```bash
-gh pr checks <n> --watch --fail-fast
-```
+   | Verdict | When | Action |
+   |---|---|---|
+   | Fix | Real, in scope, clear fix | Fix it, reply with the commit SHA, resolve |
+   | Dismiss | Wrong, misreads the code, or a nit outside the PR's goal | Reply with a one-line reason, resolve |
+   | Escalate | Needs a product or architecture call, or a fix over ~50 lines | Reply that Bobby will decide, leave open |
 
-If checks are still in progress after `--watch` returns, or no checks exist yet, poll `gh pr checks` every 60 seconds until every check on the head SHA has completed.
+   A failing check is always Fix. Rerun a known-flaky test once (`gh run rerun <id> --failed`) before diagnosing. Fix the code, never the check.
+4. **Push.** Commit each fix on its own, staging files by name, then push the batch once. If `mergeStateStatus` is `DIRTY` or `BEHIND`, rebase onto the base and push with `--force-with-lease`, the only force-push allowed.
+5. Back to 1, unless the PR is **done** or a stop applies.
 
-Then wait for the PR to go quiet. Do not try to predict whether a review bot will post; bots start on their own triggers, take minutes to finish, and skip PRs entirely when out of credits. Poll `gh pr view <n> --json updatedAt` every 60 seconds and proceed only once `updatedAt` has not changed for 10 minutes. It bumps on comments, reviews, label changes, and pushes, so late activity resets the window. A CI rerun (`run_attempt` on the run increases) also resets it. Measure the window from the later of the last check completion and the last `updatedAt` change.
+Handle review comments as they land, even while CI is still running.
 
-## 3. Collect open work
+## Scope
 
-All of it, from all three sources:
+Change only what a finding needs; list new ideas in the report instead of the PR. Every comment you post is a fix SHA or a dismiss/escalate reason, and ends with `<!-- babysit -->` so the watcher skips your own replies.
 
-- Failing or timed-out checks on the current head SHA.
-- Unresolved review threads whose last comment is not from Bobby's account. A thread where Bobby's account had the last word is already answered: escalated, or waiting on the reviewer.
-- PR-level comments with no resolving comment from Bobby's account after them.
-- A current review decision of changes requested.
-- Review bot comments and reviews are not "noise". You should always collect them for triage.
+## Done
 
-Skip pure approvals or "LGTM". Use `gh pr view <n> --json reviewDecision,comments` for the review decision and PR-level comments, and `gh api repos/<owner>/<repo>/pulls/<n>/comments --paginate` for inline comments. Fetch review threads through GraphQL to check `isResolved`, paginating until all threads and their comments have been read. Inspect failed checks with `gh run view <run-id> --log-failed`.
+The PR is **done** when all of these hold on the head commit:
 
-## 4. Triage
+- every check passed
+- every expected bot has reviewed the head commit, or the watcher went quiet while waiting on it (that bot skipped, usually out of credits)
+- no open work remains except escalated threads
+- no review requests changes
 
-Verify every finding against the source before touching code. Bots are confidently wrong often enough that a finding is a claim, not a fact.
+## Stop and report early
 
-| Verdict | When | Do |
-|---|---|---|
-| Fix | Real, in scope, clear fix | Fix it |
-| Dismiss | Wrong, misreads the code, or nitpick outside the PR's goal | Reply with a one-line reason, resolve |
-| Escalate | Needs a product or architecture call, touches unrelated code, or the fix would exceed roughly 50 lines | Reply that it is deferred to Bobby, leave open |
+- A push or rebase fails, or a rebase conflict has no confident resolution.
+- A human reviewer asks for changes that need Bobby's judgement.
+- Another PR makes this one obsolete. Ask before closing it.
+- Six pushes without reaching done. Something is oscillating.
 
-CI failures are always Fix unless the failure is a known-flaky test, in which case rerun once with `gh run rerun <id> --failed` before diagnosing. Never weaken a check to pass it.
+## Report
 
-## 5. Fix, push, loop
-
-Make one commit per thread or CI root cause after focused verification. For fixed review threads, reply with the commit SHA and resolve the thread, then push. Never force-push, never `git add -A`, never touch files outside the PR's scope unless a fix requires it.
-
-If the base branch moved and the PR shows `mergeStateStatus` of `DIRTY` or `BEHIND`, rebase onto the base branch and push with `--force-with-lease`. This is the one exception to the no-force-push rule. Stop and report if the rebase hits conflicts you cannot resolve with confidence.
-
-After every push, the new head SHA is the one that counts. Go back to step 2.
-
-Stop when any of these is true:
-
-- CI is green, the PR has been quiet for 10 minutes, no unresolved threads remain except escalated ones, and no reviewer has changes requested.
-- First-round mode and one pass is done.
-- Six passes have run. Something is oscillating; report and stop.
-- A push or rebase fails.
-- A human reviewer requested changes that need Bobby's judgement. Report rather than guessing.
-
-## 6. Report
-
-Two or three sentences, then a table of what happened this session: source, finding, verdict, commit or reason. Say whether any review bot posted on the final head SHA; "CI green, no bot review arrived" is a distinct outcome from "bot reviewed, nothing open",. End with the PR URL and its state: mergeable, waiting on Bobby, or blocked. Do not merge unless Bobby asked for that up front.
+Two or three sentences, then a table: source, finding, verdict, commit or reason. Name any expected bot that skipped the head commit. End with the PR URL and its state: merged, mergeable, waiting on Bobby, or blocked.
