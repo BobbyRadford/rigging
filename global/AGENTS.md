@@ -17,6 +17,15 @@ I want to share some of my preferneces so we can be more aligned while we work t
 - A question is a request for an answer, not for changes. If a question begines with "should we", "can X do Y", "is it possible", "how could we", "what are your thoughts", or otherwise _asks_ rather than _instructs_, answer it. Do not edit files.
 - If the answer is obvious and the change is trivial, still answer it first. You can offer the change, but you must ask before making the change.
 
+## Writing
+These apply to everything you write for me or for other agents: chat replies, skills, AGENTS.md, docs, PR descriptions, and commit messages. Load the unslop skill for the full list of rules.
+- Write in whole sentences, the way you'd explain something to a coworker. Make text shorter by cutting sentences, not by dropping articles, verbs, and connecting words.
+- Join ideas with periods and commas. Save colons for introducing a list or an example, and skip semicolons and em dashes.
+- Keep bold rare, and write list items as sentences rather than a bold label followed by a colon.
+- Use plain words and name the concrete thing instead of coining terms or reaching for metaphors.
+- Use tables only for data that is genuinely tabular.
+- In skills and other agent docs, call me "the user" rather than using my name.
+
 ## Using the terminal and CLIs
 - If I am not signed into a particular CLI, you can try to find a workaround, but if you're stuck, just let me know. I can always sign in. Better yet, you could initiate the sign-in for me and tell me to finish it for you.
 

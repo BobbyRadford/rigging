@@ -1,7 +1,6 @@
 ---
 name: unslop
-description: Cut AI tells from any writing. Must always apply.
-disable-model-invocation: true
+description: Rules for plain, human-sounding prose. Use whenever you write or edit text a person or agent will read, including chat replies, skills, AGENTS.md, docs, PR descriptions, and commit messages.
 ---
 
 # Unslop

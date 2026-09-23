@@ -1,11 +1,11 @@
 ---
 name: file-upload
-description: Upload a local file (screenshot, screen recording, log, archive, any file) and get a public URL. Use when Bobby says "upload it", "host this", "send me the file", or when a PR, issue, or chat reply needs an image or video link.
+description: Upload a local file (screenshot, screen recording, log, archive, any file) and get a public URL. Use when the user says "upload it", "host this", "send me the file", or when a PR, issue, or chat reply needs an image or video link.
 ---
 
 # File upload
 
-Upload files to `https://file.bobbyradford.com` and return the permanent public URL from the response body. Authenticate with `FILE_HOST_TOKEN` from the environment. If it is unset, tell Bobby instead of guessing; do not try other hosts.
+Upload files to `https://file.bobbyradford.com` and return the permanent public URL from the response body. Authenticate with `FILE_HOST_TOKEN` from the environment. If it is unset, tell the user instead of guessing; do not try other hosts.
 
 ## Upload
 

@@ -1,6 +1,6 @@
 ---
 name: rig-apply
-description: Apply rigging changes to a machine. Use when Bobby says "rig apply", "sync my agent config", or "apply rigging to <machine>", or simply "rig"
+description: Apply rigging changes to a machine. Use when the user says "rig apply", "sync my agent config", or "apply rigging to <machine>", or simply "rig"
 ---
 
 # rig-apply
@@ -12,7 +12,7 @@ description: Apply rigging changes to a machine. Use when Bobby says "rig apply"
 ## This machine
 
 1. `bin/rig status`. Exit 2 means conflicts.
-2. If conflicts: `bin/rig diff`, show Bobby the hand edits, and ask whether to fold them into the repo or discard with `bin/rig apply --force`.
+2. If conflicts: `bin/rig diff`, show the user the hand edits, and ask whether to fold them into the repo or discard with `bin/rig apply --force`.
 3. `bin/rig apply`. Summarize wrote/pruned counts.
 
 ## A remote machine
@@ -21,7 +21,7 @@ The Mac is where the repo gets edited; each machine pulls and applies itself. Pu
 
 1. Commit and push the change.
 2. `ssh <host> 'cd ~/rigging && git pull --ff-only && bin/rig status'`. If `~/rigging` is missing, clone `https://github.com/BobbyRadford/rigging.git` there first.
-3. On conflicts, run `bin/rig diff` over ssh and ask Bobby before using `--force`, same as locally.
+3. On conflicts, run `bin/rig diff` over ssh and ask the user before using `--force`, same as locally.
 4. `ssh <host> 'cd ~/rigging && bin/rig apply'`.
 
 ## Secrets
