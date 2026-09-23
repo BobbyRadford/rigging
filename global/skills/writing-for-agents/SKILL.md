@@ -3,83 +3,86 @@ name: writing-for-agents
 description: Writing documents for agents. Use when creating or editing skills, or modifying AGENTS.md or CLAUDE.md.
 ---
 
-Reference for writing any document an agent consumes: a skill, an `AGENTS.md` / `CLAUDE.md`, a doc reached by a pointer. The packaging differs; the writing does not: the same levers make each one predictable, since the agent takes the same _process_ every run rather than producing the same output.
+Use this when you write anything an agent will read, whether that's a skill, an `AGENTS.md` or `CLAUDE.md`, or a doc that one of those points to. The goal is a document that leads the agent through the same process every time it runs. The output can differ from run to run, but the way the agent gets there shouldn't.
 
-When the document you're writing is a skill, read [`SKILL-MECHANICS.md`](SKILL-MECHANICS.md) for frontmatter, invocation choice, and router skills.
+If the document is a skill, also read [`SKILL-MECHANICS.md`](SKILL-MECHANICS.md). It covers frontmatter, how a skill gets invoked, and router skills.
 
 ## Voice
 
-Write the document the way you'd explain the task to a capable coworker, in whole sentences with plain words. Agents copy the style of what they read, so a clipped, symbol-heavy document produces clipped, symbol-heavy work. Everything below about cutting load means cutting whole sentences and whole ideas, never the articles, verbs, and connecting words that make a sentence readable. Load the unslop skill for the full set of prose rules, and refer to the person you work for as "the user".
+Write the way you'd explain the task to a capable coworker, in whole sentences with plain words. Agents copy the style of what they read. A clipped document full of symbols and bold labels gets clipped, symbol-heavy work back. When this skill talks about cutting, it means cutting whole sentences and whole ideas. Keep the articles, verbs, and connecting words that make each sentence easy to read. Refer to the person you work for as "the user", and load the unslop skill for the full set of prose rules.
 
 ## Context pointers
 
-A **context pointer** is a reference held in the agent's context that names some out-of-context material and encodes the condition for reaching it. A skill's description is one; a line in `AGENTS.md` naming a doc is the same object. The pointer's _wording_, not its target, decides when the agent reaches the material, and how reliably. A must-have target behind a weakly worded pointer is a variance bug: sharpen the wording first, and inline the material only if sharpening fails.
+A context pointer is a line the agent always sees that names some material it doesn't see yet and says when to go read it. A skill's description is a context pointer, and so is a line in `AGENTS.md` that mentions a doc. The wording of the pointer decides whether the agent actually reads the material. If something important sits behind a vaguely worded pointer, the agent will read it on some runs and skip it on others. Fix the wording first, and only move the material inline if better wording doesn't work.
 
-A pointer does two jobs: state what the material is, and list the **branches** that should trigger reaching it (a branch is a distinct case the document handles, so different runs take different paths through it). Every word of an always-loaded pointer costs on every turn, so it earns even harder pruning than the body:
+A good pointer says what the material is and lists each situation that should send the agent to it. Because the agent sees the pointer on every turn, each word costs something every time, so trim it harder than you'd trim the body.
 
-- **Front-load the leading word**: the pointer is where it does its triggering work.
-- **One trigger per branch.** Synonyms that rename a single branch are one branch written twice; collapse them and keep only genuinely distinct branches.
-- **Cut identity the body already carries.**
+- Put the most important word first, since that's the word that triggers the read.
+- Give each distinct situation one trigger. Three synonyms for the same situation are one trigger written three times.
+- Leave out anything the body already explains.
 
-## The two loads
+## Two kinds of cost
 
-Every document and pointer you add spends one of two budgets:
+Every document you add costs the agent or the user something.
 
-- **Context load** is the cost of always-loaded material on the agent's window: an `AGENTS.md` line, a skill description, anything sitting in context every turn, spending tokens and attention whether or not it fires.
-- **Cognitive load** is the cost on the human: which documents exist and when to reach for each. The human is the index. Not a cost to minimise: it is the price of human agency; spend it where human judgement matters, remove it where it does not.
+Context cost is what always-loaded text costs the agent. An `AGENTS.md` line or a skill description takes up tokens and attention on every turn, whether or not it's relevant.
 
-Material reached only through a pointer escapes context load at the price of the pointer's own line; material with no pointer at all rides entirely on cognitive load.
+Memory cost is what it costs the user to know which documents exist and when to use them. This cost is worth paying where the user's judgement matters, because it keeps them in control. Where their judgement doesn't matter, remove it.
 
-## Information hierarchy
+Material behind a pointer only costs the agent the pointer's line. Material with no pointer at all costs the agent nothing, but the user has to remember it exists.
 
-A document is built from two content types: **steps** (the ordered actions the agent performs) and **reference** (definitions, rules, facts consulted on demand). The two mix freely: all steps (a recipe), all reference (a review's rules, this skill), or both. The core decision is where each piece sits on the **information hierarchy**, a ladder ranked by how immediately the agent needs the material:
+## What goes where
 
-1. **In-file step** is the primary tier: what the agent does, in order.
-2. **In-file reference** is consulted on demand. Often a legitimately flat peer-set (every rule of a review on one rung), which is a fine arrangement, not a smell.
-3. **Disclosed reference** is pushed out into a separate file, reached by a context pointer, loaded only when the pointer fires. Spans a sibling file in the same folder through fully external reference that lives anywhere and any document can point at.
+A document contains steps, which are the actions the agent takes in order, and reference, which is rules and facts the agent looks up when it needs them. A recipe is all steps, a review checklist is all reference, and many documents mix the two.
 
-Push too little down and the top bloats; push too much and you hide material the agent actually needs. That tension is the whole decision.
+Decide where each piece goes by how soon the agent needs it.
 
-**Progressive disclosure** is the move down the ladder (out of the main file and behind a pointer) so the top stays legible. Not primarily a token optimisation: it is how the hierarchy is protected. Branching is the cleanest disclosure test: inline what every branch needs, and push behind a pointer what only some branches reach. When a document has steps, in-file reference that should be disclosed buries them and turns attending to them into a coin-flip: a variance lever, not just a legibility one.
+1. Steps go in the main file, in order.
+2. Reference the agent needs on most runs goes in the main file, after or beside the steps.
+3. Reference only some runs need goes in a separate file, with a pointer to it from the main file.
 
-**Co-location** is the within-file companion: where the ladder decides _how far down_ a piece sits, co-location decides _what sits beside it_ once there. Keep a concept's definition, rules, and caveats under one heading rather than scattered, so reading one part brings its neighbours with it. The test: the document should read like documentation written for the agent. Grouped material reads that way; scattered material does not. (Distinct from duplication: that repeats one meaning in two places; scattering fragments one meaning across many.)
+The cleanest test is to ask which cases need a piece. If every case needs it, keep it in the main file. If only some cases need it, move it to a separate file. Moving out too little buries the steps under reference, and the agent starts skipping steps. Moving out too much hides material the agent needed.
 
-**Sprawl** is the failure mode here: a document simply too long, even when every line is live and unique. Attention thins across the excess, and every extra line is one more to keep relevant. The cure is the ladder: disclose reference behind pointers, and split by branch or sequence so each path carries only what it needs.
+Keep related material together. A concept's definition, its rules, and its caveats belong under one heading, so reading one part brings the rest along. The finished document should read like documentation written for the agent. This is different from duplication. Duplication says the same thing in two places, while scattering splits one idea across several places.
 
-## Steps and completion criteria
+A document can also be too long even when every line is accurate and useful. The agent's attention spreads thin across a long file, and every extra line is one more to keep up to date. Fix this by moving reference out into separate files and by splitting the document into smaller ones.
 
-Every step ends on a **completion criterion**, the condition that tells the agent the work is done. Two properties make it a lever:
+## Steps and how they end
 
-- **Clarity**: can the agent tell done from not-done? A vague bound ("understanding reached") invites **premature completion**: ending the step before it is genuinely done, attention slipping to _being done_. The visible steps still ahead (the **post-completion steps**) supply the pull; the criterion's clarity is the resistance. Defend in order: **sharpen the bound first** (local and cheap); only if it is irreducibly fuzzy _and_ you observe the rush, hide the later steps by splitting the sequence. Hiding only works across a real context boundary (a hand-off or a subagent dispatch; an inline call leaves the later steps in context and clears nothing).
-- **Demand**: how much it requires. "Every modified model accounted for" forces thorough work where "produce a change list" does not. Demand drives **legwork** (the digging the agent does within the work, latent in the wording rather than written as its own step), and it is not step-bound: "every rule applied" binds a body of flat reference just as "every step done" binds a sequence, which is how an all-reference document still carries an exhaustiveness bar.
+Every step needs a completion criterion, a condition that tells the agent the step is done. How clear it is matters, and so does how much it asks for.
 
-The strongest criteria are both checkable and exhaustive.
+Clarity decides whether the agent can tell done from not done. A vague criterion like "until you understand the problem" lets the agent stop early, because the steps still ahead pull it forward. Sharpen the criterion first. If it can't be made sharp and you actually see the agent rushing, hide the later steps by splitting the work across a real handoff, such as a subagent. Calling another skill in the same session doesn't hide anything, because the later steps stay in context.
 
-## When to split
+How much a criterion asks for decides how much work the agent does. "Every modified model is accounted for" makes the agent dig much harder than "produce a list of changes". This works for reference too. "Every rule applied" sets the same bar for a checklist that "every step done" sets for a sequence.
 
-Splitting one document into two spends one of the two loads, so split only when the cut earns it:
+The best criteria are ones the agent can check and that cover everything.
 
-- **By sequence**: split a run of steps where the post-completion steps tempt the agent to rush the one in front of it. Keeping them out of view drives more legwork on the current task. Beware the reverse: merging sequences exposes each step's later steps to what follows, inviting premature completion.
-- **By invocation**, skill-specific: see [`SKILL-MECHANICS.md`](SKILL-MECHANICS.md).
+## When to split a document
+
+Splitting adds cost, so only split when it pays off.
+
+Split a sequence of steps when the later steps tempt the agent to rush the current one. Keeping them out of view makes the agent work harder on what's in front of it. The reverse also holds. Merging two sequences shows the agent more steps ahead, which invites it to rush.
+
+Splitting a skill so it can be invoked separately is covered in [`SKILL-MECHANICS.md`](SKILL-MECHANICS.md).
 
 ## Leading words
 
-A **leading word** is a compact concept already living in the model's pretraining that the agent thinks with while running the document (_lesson_, _fog of war_, _tracer bullets_). Repeated as a token, never as a sentence, it accumulates a distributed definition and anchors a whole region of behaviour in the fewest tokens, by recruiting priors the model already holds. Coining your own works if you define it clearly, but a made-up word recruits no priors: you pay in definition tokens what a pretrained word gives free; reach for an existing word first.
+A leading word is an ordinary word or phrase the model already understands well, which you repeat to anchor a behavior. For example, a "tight" loop means one that's fast, deterministic, and cheap to run. A loop that goes "red" means one that fails reliably on the bug, which turns a fuzzy goal into something the agent can observe. Each time the agent sees the word, it reaches for the same behavior, and one word replaces a sentence you would otherwise repeat.
 
-It anchors twice. In the body, _execution_: the agent reaches for the same behaviour every time the word appears, and inside flat reference it focuses attention on a class of thing to look for. In a pointer, _invocation_: when the same word lives in your prompts, your docs, and your codebase, the agent links that shared language to the material and reaches it more reliably.
+Choose words the model already knows. A made-up term brings no meaning with it, so you have to spend sentences defining it. Write a leading word as plain text, like any other word. Bolding it or defining it with a colon turns it into jargon. The same word works in a pointer, where using the same language as your prompts and codebase helps the agent find the material.
 
-Hunt for opportunities to refactor with leading words. A triad spelled out at three sites, a pointer spending a sentence to gesture at one idea. Each is a passage begging to collapse into a single token:
+Look for places where one word could replace a repeated phrase. If the same three qualities are spelled out in three places, or a pointer spends a whole sentence gesturing at one idea, a leading word can usually replace it.
 
-- "fast, deterministic, low-overhead" → _tight_ (a _tight_ loop).
-- "a loop you believe in" → _red_, turning a fuzzy gate into a binary observable state (the loop goes _red_ on the bug, or it doesn't).
+## Say what to do
 
-You win twice: fewer tokens, and a sharper hook for the agent to hang its thinking on. Assume every document is carrying restatements that leading words retire. Go find them.
-
-**Negation** is the failure mode beside this lever: steering by prohibition drags the forbidden behaviour into context and makes it _more_ available, not less. _Don't think of an elephant_, and the elephant is all there is; the negation is a weak modifier the strongly-activated concept overruns, so the ban half-reads as an instruction to do the thing. Prompt the **positive**: state the target behaviour ("write one-line comments") so the banned one is never spoken. A prohibition earns its place only as a hard guardrail you cannot phrase positively; even then, pair it with the positive target so attention lands on what to do.
+Telling the agent what not to do tends to backfire. Naming the unwanted behavior puts it in the agent's context, and the "don't" is weaker than the behavior it's attached to. Describe the behavior you want instead, such as "write one-line comments". Keep a prohibition only as a hard rule you can't phrase positively, and pair it with the behavior you want.
 
 ## Pruning
 
-- Keep each meaning in a **single source of truth**: one authoritative place, so changing the behaviour is a one-place edit. **Duplication** (the same meaning in more than one place) costs maintenance and tokens, and inflates a meaning's prominence on the ladder past its real rank. (The accidental inverse of a leading word, which repeats a token on purpose, never the meaning.)
-- The **environment** is a source of truth too (`package.json` scripts, config files, the directory layout, `--help` output), and a document that restates it is a **cache**: a copy of a lookup, earning its load only when the lookup is expensive. Cache what the agent cannot find by looking: the unwritten convention, the reason behind a choice, the gotcha no config confesses. Leave the one-file, one-command lookups to the environment, where they cannot go stale.
-- Check every line for **relevance**: does it still bear on what the document does? A line loses relevance by never bearing on the task (mere exposition, or a branch that should be disclosed) or by going stale as the behaviour or world it describes changes. Shorter documents are easier to keep relevant. Without a pruning discipline the default fate is **sediment**: stale layers that settle because adding feels safe and removing feels risky, until you must core down through them to find what is still live.
-- Hunt **no-ops** sentence by sentence: an instruction the model already obeys by default pays load to say nothing. The test (does it change behaviour versus the default?) is model-relative, not reader-relative: two people disagreeing about a no-op disagree about the default, and settle it by running the document, not by debate. When a sentence fails, delete the whole sentence rather than trim words from it. The test also grades leading words: a word too weak to beat the default (_be thorough_ when the agent is already thorough-ish) is a no-op, and the fix is a stronger word (_relentless_), not a different technique.
+Say each thing in one place, so changing a behavior means editing one line. Duplication costs tokens and upkeep, and it makes a point look more important than it is.
+
+Leave out anything the agent can find by looking at the repo, such as scripts in `package.json`, config files, the directory layout, or `--help` output. A copy of those goes stale. Write down what the agent can't find by looking, like unwritten conventions, the reasons behind a choice, and gotchas that no config file mentions.
+
+Check every line against what the document does today. Lines go stale when the behavior they describe changes, and stale lines pile up because adding feels safe and deleting feels risky. Shorter documents are easier to keep current.
+
+Delete any instruction the model already follows without being told. The test is whether the line changes what the agent does compared with having no line at all, and you settle that by running the document. When a sentence fails the test, delete the whole sentence rather than trimming words from it. A leading word too weak to change behavior, like "be thorough", fails the same test. Replace it with a stronger word, like "relentless".
