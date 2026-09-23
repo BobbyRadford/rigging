@@ -22,7 +22,7 @@ Work out which review bots to expect by looking at who has reviewed this PR so f
 3. Check each finding against the code before you act on it. Review bots are wrong often enough that a finding is only a claim until you've confirmed it. Then handle it one of three ways.
    - If it's real, in scope, and the fix is clear, fix it. Reply with the commit SHA and resolve the thread.
    - If it's wrong, misreads the code, or is a nitpick outside the PR's goal, reply with a short reason and resolve the thread.
-   - If it needs a product or architecture decision, or the fix would run past about 50 lines, reply that the user will decide and leave the thread open.
+   - If it needs a product or architecture decision, or the fix would reach beyond what the PR set out to do, reply that the user will decide and leave the thread open.
 
    Failed checks always get fixed. If the failure is a test that's known to be flaky, rerun it once with `gh run rerun <id> --failed` before digging in. Fix the code rather than loosening the check.
 4. Commit each fix separately, staging files by name, and push once the whole batch is done. If the PR has fallen behind its base branch or has conflicts, rebase and push with `--force-with-lease`. That's the only force push allowed.
