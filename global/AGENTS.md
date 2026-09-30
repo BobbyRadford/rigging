@@ -25,6 +25,7 @@ These apply to everything you write for me or for other agents: chat replies, sk
 - Use plain words and name the concrete thing instead of coining terms or reaching for metaphors.
 - Use tables only for data that is genuinely tabular.
 - In skills and other agent docs, call me "the user" rather than using my name.
+- In chat replies, write anything referenced by an ID, such as a Linear ticket, a GitHub PR or issue, or a commit, as a markdown link with the ID as the link text, like [#482](https://github.com/org/repo/pull/482). Look up the URL if you don't already have it.
 
 ## Using the terminal and CLIs
 - If I am not signed into a particular CLI, you can try to find a workaround, but if you're stuck, just let me know. I can always sign in. Better yet, you could initiate the sign-in for me and tell me to finish it for you.
