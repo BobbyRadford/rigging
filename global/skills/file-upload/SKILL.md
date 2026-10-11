@@ -5,20 +5,19 @@ description: Upload a local file (screenshot, screen recording, log, archive, an
 
 # File upload
 
-Upload files to `https://file.bobbyradford.com` and return the permanent public URL from the response body. Authenticate with `FILE_HOST_TOKEN` from the environment. If it is unset, tell the user instead of guessing; do not try other hosts.
+Upload files to the team file host on pasture1 and return the permanent public URL from the response body. Uploads go to `https://files.internal.rownd.ai`, which is only reachable from the tailnet and needs no token. The URL that comes back is on `https://files.rownd.ai`, and anyone with the link can read it.
 
 ## Upload
 
 ```bash
-curl -sS --fail-with-body -X PUT -T <path-to-file> \
-  -H "X-Upload-Token: $FILE_HOST_TOKEN" \
-  "https://file.bobbyradford.com/<filename>"
+curl -sS --fail-with-body -T <path-to-file> \
+  "https://files.internal.rownd.ai/<filename>"
 ```
 
 - Use only the file's basename for `<filename>`, such as `login-flow.mp4`. The server slugifies it and adds a random suffix, so names do not need to be unique.
 - The response body is the permanent public URL. Use it exactly as returned.
-- On HTTP 401 report that the token is wrong or unset. Do not retry.
-- Never claim a file is hosted before the upload command succeeds.
+- Some networks' DNS drops the answer for `*.internal.rownd.ai`. If curl reports `Could not resolve host`, rerun the same command with `--resolve files.internal.rownd.ai:443:100.83.55.79`, which is pasture1's tailnet address.
+- If the connection still fails, tell the user the machine may be off the tailnet and stop. Never claim a file is hosted before the upload command succeeds.
 
 ## Use the URL in GitHub
 
@@ -32,4 +31,4 @@ ffmpeg -i recording.mp4 -vf "fps=10,scale=800:-1" -loop 0 preview.gif
 
 ## Use the URL elsewhere
 
-Slack and most chat clients unfurl image and mp4 URLs on their own; paste the bare URL. For logs and archives, link them with a short label describing what is inside.
+Slack and most chat clients unfurl image and mp4 URLs on their own, so paste the bare URL. For logs and archives, link them with a short label describing what is inside.

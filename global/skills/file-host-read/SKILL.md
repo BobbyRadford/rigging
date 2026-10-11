@@ -1,6 +1,6 @@
 ---
 name: file-host-read
-description: Use when the user shares a file.bobbyradford.com URL.
+description: Use when the user shares a files.rownd.ai, files.internal.rownd.ai, or file.bobbyradford.com URL.
 ---
 
 # File host read
