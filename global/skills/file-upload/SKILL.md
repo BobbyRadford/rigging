@@ -16,8 +16,7 @@ curl -sS --fail-with-body -T <path-to-file> \
 
 - Use only the file's basename for `<filename>`, such as `login-flow.mp4`. The server slugifies it and adds a random suffix, so names do not need to be unique.
 - The response body is the permanent public URL. Use it exactly as returned.
-- Some networks' DNS drops the answer for `*.internal.rownd.ai`. If curl reports `Could not resolve host`, rerun the same command with `--resolve files.internal.rownd.ai:443:100.83.55.79`, which is pasture1's tailnet address.
-- If the connection still fails, tell the user the machine may be off the tailnet and stop. Never claim a file is hosted before the upload command succeeds.
+- If the host does not resolve or the connection fails, tell the user the machine may be off the tailnet and stop. Never claim a file is hosted before the upload command succeeds.
 
 ## Use the URL in GitHub
 
