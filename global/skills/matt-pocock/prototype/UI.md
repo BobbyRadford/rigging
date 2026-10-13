@@ -93,7 +93,7 @@ Put the switcher in a single shared component so both sub-shapes can reuse it. L
 
 ### 5. Hand it over
 
-Surface the URL (and the `?variant=` keys). The user will flip through whenever they get to it. The interesting feedback is usually **"I want the header from B with the sidebar from C"**, which is the actual design they want.
+Surface the URL (and the `?variant=` keys). The user can't reach `localhost` or a LAN IP on another machine, so when the host is on Tailscale, give a URL on its MagicDNS name instead. `tailscale status --json` has it under `Self.DNSName` (drop the trailing dot). Make sure the dev server listens on an address Tailscale can reach, such as `0.0.0.0`, rather than only on `127.0.0.1`. The user will flip through whenever they get to it. The interesting feedback is usually **"I want the header from B with the sidebar from C"**, which is the actual design they want.
 
 ### 6. Capture the answer and clean up
 
