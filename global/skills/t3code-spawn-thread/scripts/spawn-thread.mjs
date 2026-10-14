@@ -7,7 +7,8 @@
 //     [--model claude-opus-5-5] [--effort high] [--context 1m] \
 //     [--branch t3code/abc12345] [--no-worktree] [--timeout-min 15] [--json]
 //
-// Needs Node 22+ (global WebSocket) and a running `t3 serve` under ~/.t3.
+// Needs a running `t3 serve` under ~/.t3 and a global WebSocket, which Node 22+
+// has built in and Node 20 gets from --experimental-websocket.
 import { execFileSync } from "node:child_process";
 import { randomUUID, randomBytes } from "node:crypto";
 import fs from "node:fs";
@@ -147,13 +148,18 @@ function finish(code) { try { ws.close(); } catch {} process.exit(code); }
 function log(msg) { process.stderr.write(`${msg}\n`); }
 function fail(msg) { log(msg); process.exit(1); }
 function readJson(p) { return JSON.parse(fs.readFileSync(p, "utf8")); }
+// 0.0.45+ ships one binary at versions/<v>/t3. Older runtimes kept it in a
+// per-platform npm package at versions/<v>/node_modules/@t3code/t3-<os>-<arch>/t3.
 function resolveT3Binary(home) {
   const fromPath = process.env.T3_BIN; if (fromPath) return fromPath;
   const state = readJson(path.join(home, "runtime", "service-state.json"));
-  const dir = path.join(home, "runtime", "versions", state.activeVersion, "node_modules", "@t3code");
-  const pkg = fs.readdirSync(dir).find((n) => n.startsWith("t3-"));
-  if (!pkg) fail(`no t3 binary under ${dir}`);
-  return path.join(dir, pkg, "t3");
+  const versionDir = path.join(home, "runtime", "versions", state.activeVersion);
+  const bin = path.join(versionDir, "t3");
+  if (fs.existsSync(bin)) return bin;
+  const pkgDir = path.join(versionDir, "node_modules", "@t3code");
+  const pkg = fs.existsSync(pkgDir) && fs.readdirSync(pkgDir).find((n) => n.startsWith("t3-"));
+  if (!pkg) fail(`no t3 binary at ${bin} or under ${pkgDir}`);
+  return path.join(pkgDir, pkg, "t3");
 }
 function parseArgs(argv) {
   const out = {};
